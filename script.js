@@ -1,5 +1,6 @@
 const API_KEY = "e52ba63f245702ffc513a7a3555606844f3a096b";
 const API_URL = "https://emoji-api.com/emojis";
+
 const localDictionary = {
   love: "❤️",
   happy: "😊",
@@ -31,6 +32,7 @@ let cache = {};
 
 inputField.addEventListener("input", showSuggestion);
 translateButton.addEventListener("click", translateToEmoji);
+copyButton.addEventListener("click", copyToClipboard);
 
 async function translateToEmoji() {
   const input = inputField.value.trim();
@@ -53,6 +55,30 @@ async function translateToEmoji() {
   } catch (error) {
     console.error("Error translating text:", error);
     showError("An error occurred while processing your request.");
+  }
+}
+
+async function fetchEmoji(word) {
+  if (cache[word]) {
+    return cache[word];
+  }
+
+  if (localDictionary[word.toLowerCase()]) {
+    const emoji = localDictionary[word.toLowerCase()];
+    cache[word] = emoji;
+    return emoji;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}?search=${word}&access_key=${API_KEY}`);
+    const data = await response.json();
+    const emoji = data.length > 0 ? data[0].character : `❓(${word})`;
+    cache[word] = emoji;
+    return emoji;
+  } catch {
+    const fallback = `❓(${word})`;
+    cache[word] = fallback;
+    return fallback;
   }
 }
 
@@ -88,32 +114,14 @@ async function showSuggestion() {
   }
 }
 
-async function fetchEmoji(word) {
-  if (cache[word]) {
-    return cache[word];
-  }
-
-  if (localDictionary[word.toLowerCase()]) {
-    const emoji = localDictionary[word.toLowerCase()];
-    cache[word] = emoji;
-    return emoji;
-  }
-
-  try {
-    const response = await fetch(`${API_URL}?search=${word}&access_key=${API_KEY}`);
-    const data = await response.json();
-    const emoji = data.length > 0 ? data[0].character : `❓(${word})`;
-    cache[word] = emoji;
-    return emoji;
-  } catch {
-    const fallback = `❓(${word})`;
-    cache[word] = fallback;
-    return fallback;
-  }
-}
-
-function showError(message) {
-  errorMessage.textContent = message;
+function copyToClipboard() {
+  navigator.clipboard
+    .writeText(outputDiv.textContent)
+    .then(() => alert("Copied to clipboard!"))
+    .catch((err) => {
+      console.error("Error copying to clipboard:", err);
+      alert("Failed to copy.");
+    });
 }
 
 function resetOutput() {
@@ -121,4 +129,8 @@ function resetOutput() {
   suggestionDiv.textContent = "";
   errorMessage.textContent = "";
   copyButton.disabled = true;
+}
+
+function showError(message) {
+  errorMessage.textContent = message;
 }
